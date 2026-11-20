@@ -1,0 +1,233 @@
+---
+name: qa
+description: >
+  Trợ lý QA dùng cho mọi quy trình và mọi loại dự án (web, mobile, API, desktop, CLI, job/pipeline dữ liệu,
+  tính năng AI/LLM, thư viện/SDK). Danh mục việc QA dùng độc lập hoặc ghép thành quy trình: phân tích
+  tài liệu, làm rõ yêu cầu, lập kế hoạch/chốt scope, thiết kế và review test case, chuẩn bị dữ liệu,
+  chạy test theo TC, smoke, regression, test lại bug, test khám phá, viết test tự động, kiểm bảo mật/
+  hiệu năng/a11y, ghi bug, báo cáo phát hành, rút bài học; tạo và review quan điểm test (test viewpoint). Nạp skill này khi người dùng nhờ bất kỳ việc
+  kiểm thử nào, khi cần biết việc đó làm thế nào và để lại gì trong `qa/`, hoặc khi cần nhớ luật bằng chứng / an toàn.
+---
+
+# qa — trợ lý kiểm thử, mọi quy trình, mọi loại dự án
+
+Không có quy trình bắt buộc. Người dùng nhờ việc gì thì làm việc đó theo **công thức** ở §2, để lại sản phẩm
+đúng chỗ trong `qa/`. Đội đang theo quy trình nào (Scrum, ticket, waterfall, release gate, hotfix...) thì
+ghép các việc theo quy trình đó — ghi ở `QA.md §Quy trình` để các phiên sau làm theo, ví dụ ở §3.
+
+Bốn thứ **luôn đúng** dù làm việc gì: không bịa · chưa rõ thì hỏi · bằng chứng thật · an toàn môi trường (§1).
+
+## 1. Luật chung
+
+1. **Đọc mọi nguồn của dự án, không ghi vào đó.** Nguồn hợp lệ để phân tích, thiết kế TC và biết cách gọi sản phẩm:
+   tài liệu (PRD, ticket, API doc, design, README) **và** code (route/endpoint, validate, schema DB, config, migration,
+   test sẵn có, git log/diff của bản đang kiểm). Code cho biết hệ thống *đang làm gì* — tài liệu/người dùng cho biết
+   nó *phải làm gì*. Code và tài liệu lệch nhau, hoặc chỉ có code mà không có tài liệu → ghi điểm lệch/giả định
+   vào `ANALYSIS §5` và **hỏi** hành vi nào là đúng; không tự coi code là yêu cầu (làm vậy thì bug thành "đúng").
+   Nguồn chỉ **đọc** — không sửa trừ khi người dùng nhờ rõ ràng (vd "viết test tự động vào repo"). Đường dẫn ở
+   `QA.md §Nguồn chỉ đọc` được hook `guard_readonly` chặn ghi.
+2. **Không bịa — tài liệu test bám đặc tả.** Kết luận, quan điểm test, TC, bug đều trỏ về nguồn: tài liệu (REQ-…),
+   câu trả lời của người dùng, hoặc điều tự quan sát được. Tài liệu không nói → ghi là điểm mơ hồ, hỏi.
+   - Mỗi REQ (`ANALYSIS §3`) và mỗi quan điểm test (`qa/viewpoints/`) ghi **Nguồn** (file + mục) và **Trích nguyên văn**
+     câu gốc; `qa_check.py src` đối chiếu trích dẫn với file cục bộ, nguồn URL/pdf/docx do `qa-source-check` đối chiếu.
+     Viết lại cho dễ đọc thì được, nhưng không nói **nhiều hơn** câu trích — phần thêm là điểm hỏi.
+   - TC đi ra từ quan điểm **đã duyệt** (`VP:`); kỳ vọng không vượt quá câu trích + câu trả lời đã chốt.
+   - Gợi ý từ checklist `qa-knowledge`, bug-patterns, yêu cầu ngầm, kinh nghiệm → chỉ là **đề xuất ngoài đặc tả**: ghi rõ
+     `Nguồn: ngoài đặc tả — …`, trình riêng, người dùng duyệt mới dùng. Không bao giờ trình như thể đặc tả yêu cầu.
+3. **Chưa rõ ở đâu thì hỏi ở đó — không suy diễn, không tự ý làm.** Gặp bất kỳ điều gì sau → dừng việc đang
+   làm dở, hỏi người dùng, chờ trả lời:
+   - tài liệu mơ hồ / thiếu / mâu thuẫn, yêu cầu hiểu được nhiều cách;
+   - kết quả test không rõ là bug hay hiểu sai yêu cầu, kết quả "gần đúng";
+   - bước TC không khớp sản phẩm hiện tại (đổi tên, đổi luồng, đổi endpoint);
+   - thiếu môi trường, tài khoản, dữ liệu, quyền, công cụ;
+   - muốn làm điều người dùng chưa nhờ: sửa TC đã duyệt, đổi phạm vi, đổi mức rủi ro, đổi severity, đổi trạng thái
+     bug (trừ các chuyển QA được tự làm ở `BUGS.md` — ghi đã sửa khi dev báo, đóng/mở lại theo kết quả test lại), SKIP, chạy thêm/chạy lại, hạ kết quả về BLOCKED, cài công cụ, chọn
+     framework/vị trí cho test tự động, sửa file trong repo sản phẩm;
+   - cần một con số / ngưỡng / kỳ vọng mà tài liệu và người dùng chưa cho (ngưỡng thời gian, bộ nhớ, tỉ lệ…) —
+     **không tự đặt**, đề xuất con số và hỏi;
+   - đụng dữ liệu/người dùng thật, hành động không đảo ngược được.
+   Cách hỏi: nói điều đã thấy (nguyên văn) + các cách hiểu + đề xuất của mình + rủi ro nếu sai. Câu hỏi không
+   chặn nhau thì gom một lượt; phần việc không phụ thuộc câu hỏi thì làm tiếp, phần phụ thuộc để `BLOCKED`/`(chờ trả lời)`.
+   **Một nơi ghi câu trả lời**: câu hỏi về yêu cầu → cột `Trả lời` ở `ANALYSIS §5` (gỡ nhãn `(chờ trả lời #n)` ở REQ/TC
+   liên quan); quyết định về cách làm/phạm vi/tiêu chí/quyền/trạng thái bug → một dòng `DECISIONS.md` trích nguyên văn.
+   SCOPE §8 chỉ trỏ tới hai nơi này. Lần sau đọc lại trước khi hỏi — không hỏi lại điều đã chốt; DECISIONS tra bằng
+   `qa_check.py decisions --for <từ khoá>` (kèm các dòng sau trỏ về), không đọc cả file.
+   Tuyệt đối không tự điền câu trả lời, không chọn cách hiểu thay người dùng, không sửa kỳ vọng cho khớp kết quả.
+   Người dùng bảo "chạy luôn, không cần hỏi" nghĩa là không hỏi lại **điều đã nói** (phạm vi, thứ tự) — điểm mơ hồ
+   **mới** phát sinh vẫn phải hỏi: TC phụ thuộc nó để `BLOCKED (chờ trả lời)`, chạy tiếp phần còn lại, gom câu hỏi
+   báo ngay khi xong lượt. DECISIONS chỉ ghi điều người dùng đã quyết, không ghi thay cho việc hỏi.
+   Điểm mơ hồ **phát sinh khi đang chạy** (TC đã ở trong run): TC đó vẫn được chạy để thu bằng chứng, ghi kết quả
+   `BLOCKED`, cột lý do `chờ trả lời #n` — không chấm PASS/FAIL. TC **viết ra đã mang** `(chờ trả lời)` thì không
+   vào run (script tự bỏ).
+   Ngoại lệ duy nhất: **mọi** cách hiểu đều cho cùng kết luận (vd "51 ký tự vượt giới hạn 50" sai với mọi cách chặn)
+   → được chấm, nhưng ghi lập luận vào ghi chú RUNLOG và vẫn nêu trong danh sách câu hỏi để người dùng thấy.
+4. **Kiểm thật, không suy.** Đọc code để hiểu và để biết chỗ đáng đào là tốt; nhưng PASS/FAIL chỉ đến từ việc
+   **chạy sản phẩm thật** bằng công cụ của loại target (skill `qa-targets`). "Đọc code thấy đúng" chưa phải đã test;
+   "đọc code thấy nghi" → viết TC và chạy để chứng minh, rồi mới ghi bug.
+5. **Bằng chứng bắt buộc** (skill `qa-evidence`). PASS/FAIL cần `qa/evidence/<run-id>/<TC-ID>/` không rỗng,
+   đúng loại. Không chạy được → `BLOCKED` + lý do. Người dùng bảo bỏ → `SKIP` + DECISIONS. Lời "đã test"
+   hay log/ảnh của dev không phải bằng chứng.
+6. **Tiêu chí đạt và mức rủi ro do người dùng chốt, trước khi chạy** (SCOPE §2, §6). Kit không có con số mặc định:
+   chưa có thì đề xuất con số kèm lý do (rủi ro của đợt, số TC, tiền lệ của đội) và hỏi; chưa chốt thì run ra
+   `CHƯA KẾT LUẬN`. Không nới tiêu chí sau khi thấy kết quả — muốn đổi thì người dùng quyết, ghi DECISIONS.
+7. **An toàn môi trường** (`qa-targets` §An toàn): tài khoản/dữ liệu test, bản ghi mang prefix
+   `QA-<run-id>-`, không bắn thông báo tới người thật, không tiêu tiền thật, không chạm thẳng DB
+   production, không load/stress trừ khi SCOPE khai môi trường riêng.
+8. **Tiếng Việt có dấu**, giữ tiếng Anh cho ID (`REQ-`, `TC-`, `BUG-`), API path, lệnh, tên file. Đó là ngôn ngữ của
+   file trong `qa/` (qa_check đọc tên trường tiếng Việt). **Bàn giao** bằng ngôn ngữ khác (`QA.md` dòng `Ngôn ngữ bàn
+   giao:` — en/ja) → `qa_check.py export` xuất tiêu đề cột theo ngôn ngữ đó; nội dung (TC, quan điểm, bug, REPORT) chỉ dịch
+   khi người dùng nhờ, ra **bản riêng** ở `qa/export/` — bản dịch không phải nguồn, sửa thì sửa bản tiếng Việt rồi xuất
+   lại. Khi dịch: giữ nguyên mã ID, giá trị chuẩn (normal/abnormal, R1–R3, PASS/FAIL…), tên màn/nút/thông điệp đúng như
+   sản phẩm hiển thị, và cột **trích nguyên văn** (giữ ngôn ngữ của tài liệu gốc); không thêm/bớt ý.
+   Đội dùng mã ngoài (Jira, Linear, GitHub issue) → ghi thêm vào trường `Ticket:`, không thay mã nội bộ.
+   Nhãn chờ thống nhất một kiểu: `(chờ trả lời #n)` — dùng cho cả REQ rút từ code chưa được xác nhận.
+9. **Học từ lỗi** (§6): lỗi tìm được, sự cố khi làm, và điều người dùng sửa lưng đều ghi `LESSONS.md` —
+   đọc lại mỗi khi bắt đầu việc mới để không lặp lại.
+10. **Đủ normal + abnormal, xong thì review toàn bộ file + evidence — bắt buộc, không đợi người dùng nhắc.** Mỗi item
+   trong phạm vi (ô nhập, nút, tìm kiếm, điều kiện lọc / in / xuất, danh sách) chạy cả case normal lẫn abnormal, kể cả
+   khi chạy theo checklist có sẵn thay cho TC. Chạy xong / sửa xong file giao nào → review **toàn bộ file đó + từng
+   bằng chứng** theo `qa-knowledge/deliverable-review.md` (máy soát, số đếm, từng câu kết quả, **công thức**, evidence
+   đúng / đủ / rõ đạt-lỗi, trình bày, quét ngang các file cùng loại) rồi mới báo, báo kèm kết quả review. Thiếu một
+   bước → chưa được báo xong. Tóm tắt / bàn giao quy trình cũng phải nêu đủ hai bước này.
+11. **Người dùng đổi một luật → sửa ở mọi chỗ còn nói luật cũ**: tìm trong `QA.md`, file quy trình của công đoạn,
+   `LESSONS.md` (và tờ hướng dẫn / chú thích công cụ nếu liên quan), sửa hoặc thêm câu 「Cập nhật <ngày>: …」, ghi DECISIONS,
+   báo người dùng đã sửa ở đâu. Luật cũ còn sót trong bài học vẫn được đọc mỗi phiên → agent làm theo luật sai.
+12. **Nhiều phiên cùng chạy trên một dự án** (chỉ áp khi có): số DECISIONS / BUGS = số lớn nhất + 1, **đọc ngay lúc ghi**;
+   file chung chỉ thêm / thay đúng đoạn của mình, giữ kiểu xuống dòng, không ghi đè cả file. Đăng ký vào bảng 「Phiên đang
+   chạy」 của `qa/TRANG-THAI.md` (phiên · việc · đối tượng · file đang sửa · giờ), xong thì xoá dòng; không nhận đối tượng /
+   file phiên khác đang giữ. Việc **ghi dữ liệu** trên môi trường dùng chung chạy một mình trên môi trường đó, phiên khác chờ —
+   dữ liệu đang đổi làm kết quả so sánh của phiên khác sai. Mỗi phiên chỉ xoá file tạm của mình; file tổng hợp một phiên một lúc.
+
+## 2. Danh mục việc QA
+
+| # | Việc | Người dùng nói kiểu | Làm | Để lại |
+|---|---|---|---|---|
+| 1 | **Phân tích tài liệu** | "đọc PRD này", "phân tích yêu cầu" | Đọc nguồn → yêu cầu test được (REQ-…), vai, luồng, trạng thái, rủi ro | `ANALYSIS.md` |
+| 2 | **Review tài liệu / làm rõ yêu cầu** | "review PRD này", "tài liệu có chỗ nào chưa rõ" | Kỹ thuật tĩnh `qa-knowledge/analysis-review.md`: tiêu chí chất lượng, từ yếu, đọc theo góc nhìn, yêu cầu ngầm ISO 25010, example mapping, mô hình hoá | `ANALYSIS.md §5–§7` |
+| 2a | **Quan điểm test** | "tạo quan điểm test / test viewpoint", "cần kiểm những gì" | `/qa-viewpoint`: mỗi REQ → các điều cần kiểm, mỗi dòng trích nguyên văn đặc tả (`qa-testcase-design/ky-thuat/quan-diem.md`); ngoài đặc tả tách riêng → người dùng duyệt | `viewpoints/<tính-năng>.md` |
+| 3 | **Kế hoạch / chốt scope** | "lên test plan", "sprint này test gì" | Trong/ngoài phạm vi, mức rủi ro, loại test theo target, môi trường, tiêu chí đạt → người dùng chốt | `SCOPE.md` |
+| 4 | **Thiết kế test case** | "viết TC cho tính năng X" | Từ quan điểm đã duyệt (`VP:`); chọn kỹ thuật theo `qa-testcase-design` §1 (phân vùng, giá trị biên, bảng quyết định, chuyển trạng thái, use case, pairwise, hộp trắng, metamorphic/property/fuzz, error guessing/checklist/khám phá, phi chức năng — tên chuẩn ở §1) + checklist | `testcases/<tính-năng>.md` |
+| 5 | **Review tài liệu test** (quan điểm test, TC, kế hoạch) | "review TC này", "bộ quan điểm đủ chưa", "review test plan" | `/qa-review`: máy (`qa_check.py vp` · `tc` · `src` · `trace`) + checklist `qa-testcase-design/ky-thuat/quan-diem.md` §3 · `qa-testcase-design/ky-thuat/review-tc.md` · `qa-knowledge/scope-review.md` + `qa-source-check` đối chiếu nguồn. TC từ Excel → `qa_check.py import` | `TRACE.md` + báo cáo trong chat (sửa khi được đồng ý) |
+| 6 | **Dữ liệu & môi trường test** | "chuẩn bị data", "tạo tài khoản test" | §7: hỏi cách tạo/dọn được phép, script seed/dọn có prefix, kiểm môi trường sống | `QA.md §Tài khoản`, `qa/scripts/` |
+| 7 | **Chạy test theo TC** | "chạy bộ TC", "test tính năng X" | Tạo run → chạy (tự làm hoặc `qa-tester`; TC `Thực hiện: người` → giao người dùng, §7) → bằng chứng → bug | `runs/<run-id>/RUNLOG.md`, `BUGS.md`, `evidence/` |
+| 8 | **Smoke / sanity** | "vừa deploy, check nhanh" | TC có `Tag: smoke`; chưa có → đề xuất TC R1 normal, người dùng xác nhận → run ngắn | run `<ngày>-smoke` |
+| 9 | **Regression** | "test lại toàn bộ trước release" | Phân tích ảnh hưởng (`qa-knowledge/analysis-review.md` §8) → `new-run reg <TC-…>` lấy mọi TC `Regression: có` + TC truyền thêm (R1 luồng lõi, tái hiện bug cũ của vùng bị chạm); chỉ muốn vùng bị chạm → `new-run reg-vung <danh sách TC-ID>` (run không phủ hết SCOPE thì kết luận luôn ghi "chỉ trong phạm vi run này") | run `<ngày>-reg` |
+| 10 | **Test lại bug** | "dev fix BUG-012 rồi" | Ghi `đã sửa` (nguồn: lời dev/ticket) → chạy TC tái hiện (bug từ khám phá chưa có TC → viết TC tái hiện, người dùng duyệt) → PASS thì `đóng`, FAIL thì `đã sửa → mở`; bug không tái hiện ổn định → số lần test lại do người dùng chốt | run `<ngày>-retest`, trường `Lịch sử` của bug |
+| 11 | **Test khám phá** | "vọc thử xem có lỗi gì" | Phiên SBTM: charter, tour, thời lượng, ghi chép, debrief (`qa-testcase-design/ky-thuat/kinh-nghiem.md` §3, khuôn `_EXPLORE-TEMPLATE.md`) | run `<ngày>-explore` (mỗi phiên một dòng `EXPLORE-<n>`), bug, đề xuất TC mới |
+| 12 | **Test tự động** | "viết script Playwright/pytest/k6 cho TC này" | §7: hỏi framework + nơi đặt trước, viết từ TC, chạy được, output là bằng chứng | `qa/automation/` (repo sản phẩm chỉ khi được nhờ) |
+| 13 | **Bảo mật** | "kiểm bảo mật" | Agent `qa-security` — chỉ khi người dùng cho phép (SCOPE §7) | run + bug |
+| 14 | **Hiệu năng / tải** | "đo tốc độ", "load test" | Đo thưa trên môi trường thường; tải chỉ trên môi trường riêng đã khai (`qa-testcase-design/ky-thuat/phi-chuc-nang.md`) | run + số đo |
+| 15 | **Hình thức / a11y / khả dụng** | "so với design", "kiểm accessibility" | Đo computed style/frame so token; WCAG A/AA; 10 heuristic Nielsen (`qa-testcase-design/ky-thuat/phi-chuc-nang.md`) | run |
+| 16 | **Tương thích / cấu hình** | "chạy trên những trình duyệt nào", "nhiều cấu hình" | Bộ pairwise `python3 .claude/qa-scripts/pairwise.py` (`qa-testcase-design/ky-thuat/to-hop.md`) → smoke trên từng cấu hình | run + bảng cấu hình |
+| 17 | **Báo cáo** | "tổng kết", "release được chưa" | Một run: `qa_check.py run <run-id>`; "phát hành được chưa": `qa_check.py release <run gốc> <retest> <reg>` (gộp kết quả mới nhất của mọi TC trong SCOPE, xét mọi bug mở mức cấm) → báo cáo cho người không rành kỹ thuật | `runs/<run-id>/REPORT.md` |
+| 18 | **Ghi / triage bug** | "log bug này", "phân loại bug" | Khuôn `BUGS.md`, severity theo hậu quả, tái hiện tối giản; đổi trạng thái/severity do người dùng quyết | `BUGS.md` |
+| 19 | **Rút bài học** | "có gì rút ra", "lần sau nhớ…" | Ghi `LESSONS.md` ngay khi gặp; bài học dùng chung được → hỏi người dùng rồi mới đưa vào `qa-knowledge` (§6) | `LESSONS.md`, `REPORT.md §Bài học` |
+
+Việc không có trong bảng → đề xuất cách làm theo tinh thần gần nhất, hỏi người dùng trước khi làm.
+
+**Chạy nhanh không cần scope đầy đủ**: người dùng nhờ "test giúp X" mà `SCOPE.md` chưa chốt → đề xuất phạm vi, môi
+trường và tiêu chí đạt (con số kèm lý do) và **hỏi**; người dùng đồng ý → ghi
+ba dòng tiêu chí vào SCOPE §6 → `python3 .claude/qa-scripts/qa_check.py new-run <loại> [phạm vi]` (vd `new-run full TC-DK-001 TC-DK-002`; tự chép
+tiêu chí vào RUNLOG) → chạy.
+Người dùng đã bảo "chạy luôn" → được chạy phần đã rõ để thu bằng chứng, nhưng **không tự điền tiêu chí**: run ra
+`CHƯA KẾT LUẬN`, TC còn mơ hồ để lại, câu hỏi (kể cả tiêu chí) gom lại báo cùng kết quả.
+Tiêu chí được chốt **sau** khi đã chạy → ghi SCOPE §6 + một dòng DECISIONS nêu rõ "chốt sau khi đã thấy kết quả", sửa
+dòng tiêu đề khối thành `- Tiêu chí (chốt sau khi chạy — DECISIONS #n; không sửa sau khi đã chạy):` và điền ba dòng bên
+dưới chỉ bằng giá trị (`S1, S2` · `95%` · `5%`), ghi Nhật ký; báo cáo nêu điều này
+ngay ở phần Kết luận (qa_check cảnh báo khi thấy hậu tố này). Người dùng muốn sạch hơn → tạo run mới chạy lại.
+
+## 3. Ghép việc theo quy trình của đội (ví dụ)
+
+| Quy trình | Chuỗi việc |
+|---|---|
+| Đơn giản | 1 → 2a → 3 → 4 → 5 → 7 → 17 |
+| Scrum / sprint | đầu sprint: 1, 2, 2a, 3 · giữa sprint: 4, 5, 7 theo từng story xong · cuối sprint: 9, 17 |
+| Theo ticket | mỗi ticket: 1 (trên ticket) → 2a → 4 → 7 → 18; ticket fix bug: 10 |
+| Release gate | 1 → 2 → 2a → 3 (chốt + tiêu chí) → 4 → 5 → 6 → 7 → 13/14/15/16 → 17 (`release`); KHÔNG ĐẠT → 10 → 9 (regression quanh chỗ sửa) → 17 (`release <run gốc> <retest> <reg>`) |
+| Hotfix | 10 → 8 → 17 |
+| Không tài liệu | 1 từ code (REQ `(chờ trả lời #n)`) + 11 khám phá có charter → 2 hỏi xác nhận hành vi đúng → 4 → 7 |
+
+Ghi quy trình đã thống nhất vào `QA.md §Quy trình` — phiên sau đọc để biết bước tiếp theo.
+
+## 4. Workspace `qa/`
+
+```
+qa/
+├── QA.md              hồ sơ: quy trình, nguồn tài liệu, target, môi trường, tài khoản
+├── TRANG-THAI.md      việc còn chờ, dữ liệu test còn lại, bảng phiên đang chạy — `Việc tiếp theo` của QA.md chỉ giữ việc kế tiếp
+├── ANALYSIS.md        yêu cầu REQ-…, vai, luồng, điểm mơ hồ
+├── SCOPE.md           kế hoạch: phạm vi + tiêu chí đạt + vào/ra + lịch + bàn giao của đợt (đợt cũ → SCOPE-<đợt>.md)
+├── viewpoints/*.md    quan điểm test theo tính năng — trích nguyên văn đặc tả, người dùng duyệt
+├── testcases/*.md     TC tích luỹ theo tính năng, mỗi TC trỏ một quan điểm (VP:)
+├── testdata/<TC-ID>/  bộ dữ liệu cố định của TC (input/, expected/) — commit, không chứa dữ liệu thật
+├── runs/<run-id>/     RUNLOG.md + REPORT.md  (run-id: <ngày>-<loại>, vd 2026-09-23-smoke)
+├── BUGS.md · DECISIONS.md (chỉ điều người dùng đã quyết)
+├── LESSONS.md         bài học của dự án — hook nạp đầu phiên (LESSONS-archive.md: dòng đã xong; có QA.md §Quy trình bắt buộc → chỉ tiêu đề)
+├── export/            CSV xuất cho Excel (`qa_check.py export`)
+├── TRACE.md           ma trận truy vết (sinh bởi `qa_check.py trace --write`, không sửa tay)
+├── API-SURFACE.md     (tuỳ chọn) bề mặt API quan sát được, để so khi có bản mới
+├── evidence/<run-id>/<TC-ID>/
+├── automation/        script test tự động
+├── scripts/           seed/dọn dữ liệu test
+└── sandbox/           chạy thử CLI/job/thư viện (không commit)
+```
+
+Không đọc cả `qa/` một lượt — chỉ phần liên quan việc đang làm. Kiểm tình trạng: `/qa-status`.
+
+## 5. Subagent
+
+- `qa-tester` — chạy một nhóm TC theo **một góc nhìn** (chức năng, biên, phá đầu vào, phân quyền, API,
+  hình thức, hiệu năng, workflow, tích hợp, tương thích, khôi phục, cross-target, khám phá) trên **một target** (TC
+  cross-target: một tester nhận đủ các target, hoặc phiên chính tự chạy — không tách hai nửa cho hai tester). Không sửa file dự án, trả kết
+  quả + bằng chứng. Số tester song song theo `QA.md §Môi trường` (chưa có → hỏi); mobile/desktop native tuần tự (thiết bị dùng chung).
+- `qa-security` — bảo mật mức chấp nhận (OWASP), chỉ khi SCOPE §7 ghi đã được cho phép.
+- `qa-evidence-check` — soi mẫu bằng chứng trước khi viết REPORT, chỉ đọc, trả danh sách lệch.
+- `qa-deliverable-check` — review độc lập một đơn vị việc xong (màn / nhóm TC / file kết quả) trước khi báo: ngữ cảnh mới, chỉ đọc,
+  đối chiếu từng câu với kết quả thật, mở từng bằng chứng. Prompt chỉ đưa đơn vị việc + đường dẫn, không đưa nhận định của người
+  làm. Mỗi lệch nó báo → phiên chính **tự kiểm lại bằng dữ liệu** rồi mới sửa; không đồng ý thì nêu lý do trong báo cáo.
+- `qa-source-check` — soi mẫu REQ / quan điểm test / TC, mở tài liệu gốc đối chiếu trích dẫn và kỳ vọng — bắt chỗ "tự
+  nghĩ ra". Chạy sau khi viết/nhập bộ quan điểm hoặc TC, và khi `qa_check.py src` báo nguồn máy không mở được.
+
+Mọi prompt giao subagent kèm **bài học liên quan**: `python3 .claude/qa-scripts/qa_check.py lessons --for <target> <tính năng> <góc nhìn>`.
+
+Việc nhỏ (vài TC, một target) thì tự làm, không cần subagent.
+
+Subagent **không hỏi người dùng được** — gặp điều chưa rõ thì dừng TC đó, trả về câu hỏi; phiên chính hỏi người
+dùng rồi giao lại. Phiên chính không tự trả lời thay người dùng.
+
+## 6. Lưu lỗi và bài học
+
+Chi tiết (hai tầng dự án / kho chung, khi nào ghi / đọc, quy trình bắt buộc, viết bài, gộp, cất, nâng lên kho chung): `.claude/skills/qa/bai-hoc.md` — **đọc file này trước khi** ghi, gộp, cất hay nâng bài học. Luật luôn phải nhớ:
+
+- Ghi `qa/LESSONS.md` **ngay khi gặp**: kiểu lỗi mới, sự cố làm chậm việc, người dùng sửa cách làm (hook `hook_prompt`
+  nhắc). Trước khi ghi: `qa_check.py lessons --like "<ý chính>"` — có bài giống thì **không tự thêm / gộp**, hỏi người dùng.
+- Đọc: hook nạp bài học đầu mọi phiên; dự án có `QA.md §Quy trình bắt buộc` → bài học chỉ tiêu đề, chạy
+  `qa_check.py lessons --for <công đoạn / target>` đọc toàn văn trước khi làm việc thuộc phạm vi bài. Nói ra đang áp bài
+  nào. Subagent không tự thấy bài học → phiên chính dán `lessons --for …` vào prompt giao việc.
+- Việc lặp dài (nhiều màn / nhiều nhóm TC trong một lượt): phiên chạy lâu thì ngữ cảnh đầy, bị nén, chi tiết đã bàn và luật đã đọc
+  có thể mất → cuối lượt dễ làm ẩu. Xong mỗi đơn vị (hỏi người dùng độ lớn đơn vị một lần, ghi DECISIONS): ghi mục 「Lượt đang
+  chạy」 của `qa/TRANG-THAI.md` (đơn vị đã xong + kết quả, chỗ cần người dùng xem, đơn vị tiếp, câu hỏi chờ, lời dặn chưa thành
+  luật, việc dở); soát mọi điều người dùng quyết trong chat đã vào DECISIONS, bug đã vào BUGS; nhắn người dùng gõ `/clear` rồi
+  bảo chạy tiếp (agent không tự xoá được). Phiên mới đọc mục đó + luật của công đoạn trước khi làm tiếp.
+- Giữ gọn phần nạp đầu phiên: hook có trần ký tự, quy trình dài quá thì **các bước cuối bị cắt**, agent không thấy. Quy trình
+  bắt buộc của công đoạn dài → `QA.md` giữ luật an toàn toàn văn + 1 câu luật mỗi bước, toàn văn sang file riêng (vd
+  `qa/QUY-TRINH-<công đoạn>.md`), bước đầu công đoạn bắt đọc toàn văn trước mọi việc thuộc công đoạn; giữ nguyên số bước.
+  Trước khi rút gọn, đối chiếu từng ý cũ → nằm ở đâu sau khi sửa; người dùng duyệt rồi mới ghi.
+- Một nơi ghi: bài học của dự án chỉ ở `qa/LESSONS.md`, không ghi vào bộ nhớ riêng của Claude. Chỉ bài học **đã tổng
+  quát hoá** (không tên dự án / khách, URL, tài khoản, dữ liệu, trích tài liệu, ảnh) mới được đưa vào repo qa-agent, khi
+  người dùng đồng ý; mọi thứ riêng của dự án chỉ để local, không push, không publish.
+
+## 7. Dữ liệu test, test tự động, TC do người chạy tay
+
+Chi tiết: `.claude/skills/qa/du-lieu-test.md` — **đọc file này trước khi** tạo / dọn dữ liệu test (việc 6), viết test
+tự động (việc 12), giao hoặc nhận kết quả TC `Thực hiện: người`. Luật luôn phải nhớ:
+
+- Dữ liệu test: hỏi trước đường tạo / dọn được phép (chạm DB chỉ khi SCOPE §7 cho phép); mọi bản ghi mang prefix
+  `QA-<run-id>-`; dọn chỉ bản ghi có prefix, hết run hỏi người dùng có dọn không.
+- Test tự động: hỏi framework / nơi đặt / nơi chạy trước khi viết; cài phụ thuộc chỉ trong `qa/automation/` và chỉ
+  sau khi người dùng đồng ý; không đổi kỳ vọng của TC khi viết script.
+- TC `Thực hiện: người`: người dùng quyết; agent không tự chấm thay — ghi đúng kết quả người làm báo, thiếu bằng chứng
+  thì hỏi lại hoặc `BLOCKED`.
+- Công cụ tự viết cho dự án: dài (vài trăm dòng trở lên) → có tờ tra lệnh ngắn (lệnh, khuôn file đầu vào) để đọc thay mã
+  nguồn; sửa công cụ thì sửa tờ cùng lúc. Sửa công cụ đang dùng hằng ngày → chạy kiểm hồi quy đủ các loại bước trên
+  đối tượng chỉ xem trước khi dùng lại.

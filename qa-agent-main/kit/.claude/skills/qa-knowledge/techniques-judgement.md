@@ -1,0 +1,65 @@
+# Mẹo nghề — viết bug, soi yêu cầu, cắt phạm vi, báo cáo
+
+> Kỹ thuật thiết kế TC ở skill `qa-testcase-design` (`qa-testcase-design/ky-thuat/`). Kỹ thuật phân tích/review tài liệu ở `analysis-review.md`.
+> Kết luận đạt/không đạt là phép tính theo tiêu chí ghi trước (`python3 .claude/qa-scripts/qa_check.py run`), không phải phán đoán. File này giữ phần còn lại.
+
+## 1. Khám phá có kỷ luật (exploratory)
+
+Không "mò vô định". Trước khi bắt đầu, xác định trong 1–2 câu:
+- **Charter**: đang thăm dò vùng nào? (vd "luồng thanh toán khi kết hợp mã giảm giá + đổi số lượng giữa chừng")
+- **Thời gian**: do người dùng chốt (`qa-testcase-design/ky-thuat/kinh-nghiem.md` §3), hết giờ dừng và ghi lại đã đi qua đâu.
+- Ghi chú **ngay** khi thấy điều bất thường, kể cả chưa chắc là bug.
+
+Làm theo phiên có charter, ghi chép và debrief — chi tiết + các "tour": `qa-testcase-design/ky-thuat/kinh-nghiem.md` §3, khuôn `qa/runs/_EXPLORE-TEMPLATE.md`.
+
+Khám phá là **nguồn phát hiện**, không thay TC: thấy lỗi → ghi bug (có bằng chứng) + đề xuất TC mới vào `qa/testcases/`. Ghi đường đã đi vào RUNLOG (dòng `EXPLORE-<n>`) để lần sau không đi lại đúng chỗ đó.
+
+**Target có giao diện (web / desktop / mobile) — không suy chức năng nút từ nhãn** (bài học từ dự án). Nhãn như
+"Xác nhận / Confirm / OK" chưa chắc là "lưu"; có thể chỉ là chốt điều kiện rồi mới mở ô nhập. Muốn ghi một nút **làm gì** và
+**bật khi nào**: đọc hàm xử lý gắn với nút trong mã phía client (gọi chức năng nào ở máy chủ, có hỏi xác nhận không, bật / tắt
+nút nào ở bước nào), hoặc bấm thử nút không ghi dữ liệu — ghi rõ nguồn (đọc mã / đã bấm thử / suy từ nhãn). Ảnh chụp màn lúc
+vừa mở **không đủ**: có nút chỉ hiện sau một bước, nút đổi nhãn theo bước, và nút chung của khung giao diện bật theo ô đang
+đứng (vd mở hộp chọn mã). Ghi trạng thái từng nút: lúc mở bật / tắt, bật khi nào, tắt khi nào.
+
+## 2. Viết bug chất lượng cao
+
+- **Tối giản repro**: thử bỏ bớt từng bước xem lỗi còn không → bộ bước còn lại là tối thiểu.
+- **Triệu chứng, không kết luận hộ**: "API trả 500 khi X", không phải "chắc backend quên validate" — nghi ngờ khu vực code thì ghi riêng, ghi rõ là suy đoán.
+- **1 bug = 1 vấn đề**.
+- Luôn kèm: request/response thật, thời điểm (giờ phút), môi trường + bản deploy, tài khoản/vai đã dùng.
+- **Severity theo hậu quả, không theo tần suất**: mất dữ liệu / lộ quyền / sai tiền dù chỉ tái hiện 3/10 lần vẫn là S1 — ghi tỉ lệ tái hiện vào bug.
+
+## 3. Soi yêu cầu mơ hồ (khi phân tích tài liệu)
+
+Đầy đủ: `analysis-review.md` (tiêu chí chất lượng, từ yếu, góc nhìn, yêu cầu ngầm, example mapping). Tối thiểu —
+câu sau đây **không đủ để viết TC** — ghi `ANALYSIS.md §5` kèm đề xuất và hỏi người dùng:
+- "Xử lý đúng", "hiển thị hợp lý", "tối ưu trải nghiệm" → hỏi: đúng là gì, cụ thể bằng con số/hành vi quan sát được.
+- Chỉ có happy path, không nói gì về lỗi → hỏi: input sai/thiếu thì hệ thống làm gì (đây chính là nguồn của TC `Kiểu: abnormal`).
+- Có 2 cách hiểu → đưa **cả 2 cách hiểu** kèm đề xuất của mình + rủi ro nếu chọn sai, không tự đoán 1 cách.
+- Hai tài liệu mâu thuẫn nhau → trích cả hai, hỏi cái nào thắng.
+
+## 4. Cắt phạm vi có trách nhiệm (khi lập kế hoạch)
+
+**Rủi ro = Xác suất lỗi × Thiệt hại nếu lỗi** — bảng chấm 1–3 ở `analysis-review.md` §7. Khi không đủ thời gian test hết:
+- Ưu tiên: (1) luồng cốt lõi vừa thay đổi · (2) tiền / dữ liệu / bảo mật · (3) regression của bug từng xảy ra · (4) sau đó mới tới ca hiếm.
+- Thứ bị cắt → `SCOPE.md §3` ngoài phạm vi **có lý do**, người dùng chốt. Không im lặng bỏ qua.
+
+## 5. Viết REPORT cho người không rành kỹ thuật
+
+- Kết luận trước, chi tiết sau: dòng đầu là verdict + 1 câu lý do.
+- Số cụ thể, không tính từ mơ hồ ("khá ổn") — "23/25 TC PASS, 2 FAIL đều S3".
+- Tin xấu nói ngay đầu, không chôn giữa báo cáo.
+
+## 6. Chọn mức effort trước mỗi đơn vị test (bài học từ dự án)
+
+Agent chạy theo mức effort (suy nghĩ) người dùng đặt — agent **không tự đổi được**. Tiêu chí là **test hiệu quả nhất**
+(bắt được lỗi, không phải làm lại), không phải tiết kiệm. Trước khi bắt đầu mỗi đơn vị test (màn, tính năng, nhóm TC):
+
+1. Đánh giá theo những gì đã biết (tên chức năng, kết quả khảo sát: số ô / nút / điều kiện, có ghi dữ liệu không).
+2. Đề xuất mức, kèm lý do một dòng:
+   - **medium** — xem / in / xuất file đơn giản, không ghi dữ liệu, ít ô;
+   - **high** — có ghi dữ liệu (tạo / sửa / xoá), nhiều ô hoặc điều kiện kết hợp, so sánh hai bản cho kết quả lệch cần lần nguyên nhân;
+   - **xhigh** — xử lý / chốt dữ liệu / chạy hàng loạt, tính toán phức tạp, luồng xuyên nhiều màn / hệ thống, thao tác không hoàn tác được.
+3. Mức đề xuất cao hơn mức đang chạy → **báo người dùng và chờ họ đổi xong rồi mới chạy**. Có thể báo trước dự kiến cho
+   loạt đơn vị sắp tới (bảng mức / lý do) và chốt lại từng đơn vị sau khảo sát.
+4. Đang chạy mà đơn vị lộ ra phức tạp hơn dự kiến (lệch khó lần, nhiều nhánh hơn) → dừng ở điểm an toàn, báo, đề xuất nâng mức.
